@@ -1,0 +1,42 @@
+# Environment files — added after security review (but .env already committed above!)
+.env
+*.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+dist/
+*.egg-info/
+
+# Java
+target/
+*.jar
+*.class
+.mvn/
+
+# Node
+node_modules/
+dist/
+.npm/
+
+# Terraform state (has secrets baked in sometimes)
+*.tfstate
+*.tfstate.backup
+.terraform/
+*.tfvars
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
