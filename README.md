@@ -104,42 +104,220 @@ Key learning moments in history:
 
 ---
 
+## Tool Installation
+
+Install the tools below before working through the remediation exercises.
+
+### gitleaks
+Fast secret scanner written in Go.
+
+```bash
+# macOS
+brew install gitleaks
+
+# Linux (binary)
+curl -sSL https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks_linux_amd64.tar.gz | tar -xz
+sudo mv gitleaks /usr/local/bin/
+
+# Go (any platform)
+go install github.com/gitleaks/gitleaks/v8@latest
+```
+
+**Verify:**
+```bash
+gitleaks version
+```
+
+### trufflehog
+Scans for secrets in git history, filesystems, and more.
+
+```bash
+# macOS
+brew install trufflesecurity/trufflehog/trufflehog
+
+# Linux / macOS (binary installer)
+curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+
+# Python (pip)
+pip install trufflehog
+```
+
+**Verify:**
+```bash
+trufflehog --version
+```
+
+### detect-secrets
+Yelp's plugin-based secret detection tool; useful for baselining and CI integration.
+
+```bash
+# macOS
+brew install detect-secrets
+
+# Linux / pipx (any platform)
+pipx install detect-secrets
+```
+
+**Verify:**
+```bash
+detect-secrets --version
+```
+
+### git-filter-repo
+The recommended tool for rewriting git history to purge secrets.
+
+```bash
+# macOS
+brew install git-filter-repo
+
+# Linux / pipx (any platform)
+pipx install git-filter-repo
+```
+
+**Verify:**
+```bash
+git filter-repo --version
+```
+
+### BFG Repo Cleaner
+Java-based alternative to `git filter-repo` — faster for simple cases like removing large files or replacing strings.
+
+**Prerequisite:** Java 8+ must be installed (`java -version`).
+
+```bash
+# macOS
+brew install bfg
+
+# Manual (any platform) — download the JAR
+curl -L -o bfg.jar https://repo1.maven.org/maven2/com/madgag/bfg/1.14.0/bfg-1.14.0.jar
+```
+
+**Verify:**
+```bash
+# Homebrew install
+bfg --version
+
+# Manual JAR install
+java -jar bfg.jar --version
+```
+
+### git-secrets
+Prevents committing secrets and credentials into git repositories.
+
+```bash
+# macOS
+brew install git-secrets
+
+# Linux (from source)
+git clone https://github.com/awslabs/git-secrets.git
+cd git-secrets && sudo make install
+
+# Register AWS patterns in the current repo
+git secrets --register-aws
+git secrets --install
+```
+
+**Verify:**
+```bash
+git secrets --list
+```
+
+---
+
 ## Remediation Exercises
 
-### Exercise 1 — Scan the working tree
-Use any of these tools to find secrets in current files:
-```bash
-gitleaks detect --source . --verbose
-trufflehog filesystem .
-detect-secrets scan > .secrets.baseline
+Each step below produces an output file consumed by the next step. Run them in order.
+
+```
+Step 1 ──► leaks.json ──┐
+                         ├──► replacements.txt ──► Step 4 (purge) ──► Step 5 (verify)
+Step 2 ──► history-leaks.json ──┘
 ```
 
-### Exercise 2 — Scan git history
+---
+
+### Step 1 — Scan the working tree → `leaks.json`
+
 ```bash
-gitleaks detect --source . --log-opts="--all" --verbose
-trufflehog git file://. --since-commit HEAD~10 --branch main
+gitleaks detect --source . --report-format json --report-path leaks.json --verbose
 ```
 
-### Exercise 3 — Purge secrets from history
-```bash
-# Install git-filter-repo first
-pip install git-filter-repo
+**Output:** `leaks.json` — all secrets found in current files, one JSON object per finding.
 
-# Remove a file entirely from history
+```bash
+# Preview: count of findings and which files are affected
+jq 'length, ([.[].File] | unique)' leaks.json
+```
+
+---
+
+### Step 2 — Scan git history → `history-leaks.json`
+
+```bash
+gitleaks detect --source . --log-opts="--all" --report-format json --report-path history-leaks.json --verbose
+```
+
+**Output:** `history-leaks.json` — all secrets found across every commit, including deleted files and old branches.
+
+```bash
+# Preview: how many unique commits contain secrets
+jq '[.[].Commit] | unique | length' history-leaks.json
+```
+
+---
+
+### Step 3 — Consolidate findings → `replacements.txt`
+
+Merge both scan outputs, deduplicate, and build a replacement map for `git filter-repo`.
+
+```bash
+jq -r '.[].Secret' leaks.json history-leaks.json \
+  | sort -u \
+  | awk '{print $0"==>***REMOVED***"}' \
+  > replacements.txt
+```
+
+**Output:** `replacements.txt` — one `secret==>***REMOVED***` line per unique secret value.
+
+```bash
+# Review before purging
+cat replacements.txt
+```
+
+---
+
+### Step 4 — Purge secrets from history
+
+Rewrites all commits, replacing every value in `replacements.txt` with `***REMOVED***`.
+
+```bash
+git filter-repo --replace-text replacements.txt
+```
+
+For secrets in specific files (e.g. `.env` committed before `.gitignore`):
+
+```bash
 git filter-repo --path .env --invert-paths
-
-# Replace a secret string in all history
-git filter-repo --replace-text <(echo 'AKIAIOSFODNN7EXAMPLE==>***REMOVED***')
 ```
 
-### Exercise 4 — Verify remediation
-After rewriting history, confirm the secret no longer appears anywhere:
+---
+
+### Step 5 — Verify remediation
+
+Use the same secret values from the scan outputs to confirm nothing remains in history.
+
 ```bash
-git log --all -p | grep "AKIAIOSFODNN7EXAMPLE"
-# Should return nothing
+jq -r '.[].Secret' leaks.json history-leaks.json | sort -u | while IFS= read -r secret; do
+  count=$(git log --all -p | grep -Fc "$secret" || true)
+  printf "%-60s %s occurrences remaining\n" "$secret" "$count"
+done
 ```
 
-### Exercise 5 — What can't be fixed by history rewrite?
+Every line should show `0 occurrences remaining`. Any non-zero value means the purge missed that secret.
+
+---
+
+### Step 6 — What can't be fixed by history rewrite?
 - Any clone or fork made before the rewrite still has the secrets
 - CI logs that printed the values
 - Docker image layers pushed to a registry
