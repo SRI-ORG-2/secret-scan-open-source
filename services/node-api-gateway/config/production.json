@@ -1,0 +1,24 @@
+{
+  "services": {
+    "orderService": "http://prod-order-service.shopflow.internal:8080",
+    "authService": "http://prod-auth-service.shopflow.internal:8000"
+  },
+  "jwt": {
+    "secret": "my-super-secret-jwt-key-that-should-be-very-long-and-random-2024!shopflow"
+  },
+  "redis": {
+    "host": "prod-redis.shopflow.internal",
+    "password": "Pr0d_R3d1s_P@ss!2024"
+  },
+  "aws": {
+    "accessKeyId": "AKIAI44QH8DHBEXAMPLE",
+    "secretAccessKey": "je7MtGbClwBF/2Zp9Utk/h3yCo8nvbEXAMPLEKEY"
+  },
+  "slack": {
+    "webhookUrl": "https://hooks.slack.com/services/T04AB12CD/B05EF34GH/xYzAbCdEfGhIjKlMnOpQrStUvWxYz",
+    "alertChannel": "#production-alerts"
+  },
+  "pagerduty": {
+    "integrationKey": "R01234567890abcdef1234567890abcd"
+  }
+}

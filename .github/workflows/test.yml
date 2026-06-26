@@ -1,0 +1,61 @@
+name: CI Tests
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [develop]
+
+jobs:
+  test-java:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: Sup3rS3cr3t_PgPass!2024
+          POSTGRES_DB: shopflow_test
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      - name: Run Java tests
+        working-directory: services/java-order-service
+        env:
+          SPRING_DATASOURCE_PASSWORD: Sup3rS3cr3t_PgPass!2024
+          STRIPE_SECRET_KEY: sk_live_51Hx8mKLkHJd7YoOp3nVwZxQbGfT9sPdcRm2iUeNvAq4kL6oX1jPcYhBt5wEsF0gHiK3lMnRqOt7uVd8aJz
+        run: mvn test
+
+  test-python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run Python tests
+        working-directory: services/python-auth-service
+        env:
+          JWT_SECRET: my-super-secret-jwt-key-that-should-be-very-long-and-random-2024!shopflow
+          SENDGRID_API_KEY: SG.xK9pLmNqRtUvWxYz.0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNO
+          TWILIO_AUTH_TOKEN: 1234567890abcdef1234567890abcdef
+        run: |
+          pip install -r requirements.txt
+          pytest tests/ -v
+
+  test-node:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Run Node tests
+        working-directory: services/node-api-gateway
+        run: |
+          npm ci
+          npm test

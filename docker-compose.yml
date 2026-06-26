@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+  api-gateway:
+    build: ./services/node-api-gateway
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - JWT_SECRET=my-super-secret-jwt-key-that-should-be-very-long-and-random-2024!shopflow
+      - REDIS_URL=redis://:r3d1s_P@ssw0rd_shopflow@redis:6379
+      - ORDER_SERVICE_URL=http://order-service:8080
+      - AUTH_SERVICE_URL=http://auth-service:8000
+      - DATADOG_API_KEY=dd4bfe3a7c9e1b2f8d5a6c4e7b9d0f2a
+    depends_on:
+      - redis
+      - order-service
+      - auth-service
+
+  order-service:
+    build: ./services/java-order-service
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - DB_PASSWORD=Sup3rS3cr3t_PgPass!2024
+      - DB_URL=jdbc:postgresql://postgres:5432/shopflow
+      - AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
+      - AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+      - STRIPE_SECRET_KEY=sk_live_51Hx8mKLkHJd7YoOp3nVwZxQbGfT9sPdcRm2iUeNvAq4kL6oX1jPcYhBt5wEsF0gHiK3lMnRqOt7uVd8aJz
+      - RABBITMQ_URL=amqp://shopflow:r@bbitMQ_P@ss!@rabbitmq:5672
+    depends_on:
+      - postgres
+      - rabbitmq
+
+  auth-service:
+    build: ./services/python-auth-service
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://shopflow_admin:Sup3rS3cr3t_PgPass!2024@postgres:5432/shopflow
+      - REDIS_URL=redis://:r3d1s_P@ssw0rd_shopflow@redis:6379
+      - JWT_SECRET=my-super-secret-jwt-key-that-should-be-very-long-and-random-2024!shopflow
+      - SENDGRID_API_KEY=SG.xK9pLmNqRtUvWxYz.0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNO
+      - TWILIO_AUTH_TOKEN=1234567890abcdef1234567890abcdef
+      - GOOGLE_CLIENT_SECRET=GOCSPX-xK9pLmNqRtUvWxYzAbCdEfGhIjKl
+    depends_on:
+      - postgres
+      - redis
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: shopflow
+      POSTGRES_USER: shopflow_admin
+      POSTGRES_PASSWORD: Sup3rS3cr3t_PgPass!2024
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --requirepass r3d1s_P@ssw0rd_shopflow
+    ports:
+      - "6379:6379"
+
+  mongo:
+    image: mongo:6
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: M0ng0_Adm1n_P@ss
+    ports:
+      - "27017:27017"
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: shopflow
+      RABBITMQ_DEFAULT_PASS: r@bbitMQ_P@ss!
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+volumes:
+  postgres_data:

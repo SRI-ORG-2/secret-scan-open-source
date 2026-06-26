@@ -1,0 +1,37 @@
+{
+  "server": {
+    "port": 3000,
+    "host": "0.0.0.0"
+  },
+  "services": {
+    "orderService": "http://order-service:8080",
+    "authService": "http://auth-service:8000"
+  },
+  "jwt": {
+    "secret": "my-super-secret-jwt-key-that-should-be-very-long-and-random-2024!shopflow",
+    "expiresIn": "1h"
+  },
+  "redis": {
+    "host": "redis",
+    "port": 6379,
+    "password": "r3d1s_P@ssw0rd_shopflow"
+  },
+  "aws": {
+    "accessKeyId": "AKIAIOSFODNN7EXAMPLE",
+    "secretAccessKey": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+    "region": "us-east-1",
+    "cloudfront": {
+      "distributionId": "EDFDVBD6EXAMPLE",
+      "keyPairId": "APKAJM22QV32R3I2EXAMPLE",
+      "privateKey": "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA2a2rwplBQLzHPZe5RJA7S/D9cMcSxpyHGfD6kKMnS0b9PBJN\nXRCocH6V8yl/OaKt1c+3DgxLsGb5JeF7mSq8oCo+FQTGAMoE4ND8qNTMGGPFfuR\nEXAMPLE_KEY_CONTENT_DO_NOT_USE_IN_PROD==\n-----END RSA PRIVATE KEY-----"
+    }
+  },
+  "datadog": {
+    "apiKey": "dd4bfe3a7c9e1b2f8d5a6c4e7b9d0f2a",
+    "appKey": "abcdef1234567890abcdef1234567890abcdef12"
+  },
+  "rateLimit": {
+    "windowMs": 900000,
+    "max": 100
+  }
+}

@@ -1,0 +1,33 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://prod-db.shopflow.internal:5432/shopflow
+    username: shopflow_prod
+    password: "Pr0d_DB_P@ssw0rd_2024!XyZ"
+  redis:
+    host: prod-redis.shopflow.internal
+    password: "Pr0d_R3d1s_P@ss!2024"
+  rabbitmq:
+    host: prod-rabbit.shopflow.internal
+    username: shopflow_prod
+    password: "Pr0d_R@bbit_P@ss!2024"
+
+cloud:
+  aws:
+    credentials:
+      access-key: AKIAI44QH8DHBEXAMPLE
+      secret-key: je7MtGbClwBF/2Zp9Utk/h3yCo8nvbEXAMPLEKEY
+    region:
+      static: us-east-1
+
+stripe:
+  secret:
+    key: "sk_live_51Hx8mKLkHJd7YoOp3nVwZxQbGfT9sPdcRm2iUeNvAq4kL6oX1jPcYhBt5wEsF0gHiK3lMnRqOt7uVd8aJz"
+
+logging:
+  level:
+    com.shopflow: INFO
+    org.springframework: WARN
+
+shopflow:
+  internal-api-key: "int_api_xK9pLmNqRtUvWxYzAbCdEfGhIjKlMnOpQrSt"
+  encryption-key: "aes256-key-shopflow-prod-2024-xK9pLm=="

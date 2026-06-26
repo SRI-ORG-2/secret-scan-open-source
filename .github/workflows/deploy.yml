@@ -1,0 +1,73 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REGISTRY: 123456789012.dkr.ecr.us-east-1.amazonaws.com
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: AKIAIOSFODNN7EXAMPLE
+          aws-secret-access-key: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Java Order Service
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/shopflow-order-service:$IMAGE_TAG services/java-order-service
+          docker push $ECR_REGISTRY/shopflow-order-service:$IMAGE_TAG
+
+      - name: Build and push Python Auth Service
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/shopflow-auth-service:$IMAGE_TAG services/python-auth-service
+          docker push $ECR_REGISTRY/shopflow-auth-service:$IMAGE_TAG
+
+      - name: Build and push Node API Gateway
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/shopflow-api-gateway:$IMAGE_TAG services/node-api-gateway
+          docker push $ECR_REGISTRY/shopflow-api-gateway:$IMAGE_TAG
+
+      - name: Deploy to EKS
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+          DB_PASSWORD: Sup3rS3cr3t_PgPass!2024
+          JWT_SECRET: my-super-secret-jwt-key-that-should-be-very-long-and-random-2024!shopflow
+          STRIPE_KEY: sk_live_51Hx8mKLkHJd7YoOp3nVwZxQbGfT9sPdcRm2iUeNvAq4kL6oX1jPcYhBt5wEsF0gHiK3lMnRqOt7uVd8aJz
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          echo "$KUBE_CONFIG" | base64 -d > /tmp/kubeconfig
+          export KUBECONFIG=/tmp/kubeconfig
+          helm upgrade --install shopflow ./infra/helm/shopflow \
+            --set orderService.image.tag=$IMAGE_TAG \
+            --set authService.image.tag=$IMAGE_TAG \
+            --set apiGateway.image.tag=$IMAGE_TAG \
+            --set secrets.dbPassword="$DB_PASSWORD" \
+            --set secrets.jwtSecret="$JWT_SECRET" \
+            --set secrets.stripeKey="$STRIPE_KEY"
+
+      - name: Notify Slack
+        if: always()
+        run: |
+          curl -X POST \
+            -H 'Content-type: application/json' \
+            --data '{"text":"Deployment ${{ job.status }} for commit ${{ github.sha }}"}' \
+            https://hooks.slack.com/services/T04AB12CD/B05EF34GH/xYzAbCdEfGhIjKlMnOpQrStUvWxYz
