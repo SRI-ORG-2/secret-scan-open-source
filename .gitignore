@@ -40,3 +40,9 @@ logs/
 # OS
 .DS_Store
 Thumbs.db
+
+# secret output files
+leaks.json
+history-leaks.json
+replacements.txt
+.secrets.baseline
