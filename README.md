@@ -272,8 +272,11 @@ Merge both scan outputs, deduplicate, and build a replacement map for `git filte
 
 ```bash
 jq -r '.[].Secret' leaks.json history-leaks.json \
-  | sort -u \
-  | awk '{print $0"==>***REMOVED***"}' \
+  | sort \
+  | uniq -c \
+  | sort -rn \
+  | tee /dev/stderr \
+  | awk '{print $2"==>***REMOVED***"}' \
   > replacements.txt
 ```
 
