@@ -276,7 +276,10 @@ jq -r '.[].Secret' leaks.json history-leaks.json \
   | uniq -c \
   | sort -rn \
   | tee /dev/stderr \
-  | awk '{print $2"==>***REMOVED***"}' \
+  | awk '
+      { print $2"==>***REMOVED***"; unique++; total += $1 }
+      END { print "\nUnique secrets: " unique "\nTotal occurrences: " total > "/dev/stderr" }
+    ' \
   > replacements.txt
 ```
 
